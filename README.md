@@ -1,4 +1,4 @@
-# 🚀 Contest Rating Engine
+# 🚀 Contest Rating System
 
 A comprehensive, percentile-based rating calculation platform built natively for real-time competitive programming ecosystems and massive multiplayer tournament platforms.
 
