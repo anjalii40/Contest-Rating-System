@@ -8,9 +8,16 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"os"
 )
 
-const baseURL = "http://localhost:8080/api"
+var baseURL = "http://localhost:8080/api"
+
+func init() {
+	if envURL := os.Getenv("API_URL"); envURL != "" {
+		baseURL = envURL
+	}
+}
 
 type User struct {
 	ID            int    `json:"id"`
