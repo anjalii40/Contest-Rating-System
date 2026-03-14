@@ -26,11 +26,13 @@ type Contest struct {
 	UpdatedAt         time.Time `json:"updated_at"`
 }
 
-// RatingHistory represents the rating_history table schema
+// RatingHistory represents the rating_history table schema with joined contest info
 type RatingHistory struct {
 	ID                int       `json:"id"`
 	UserID            int       `json:"user_id"`
 	ContestID         int       `json:"contest_id"`
+	ContestName       string    `json:"contest_name"`
+	ContestDate       time.Time `json:"contest_date"`
 	OldRating         int       `json:"old_rating"`
 	NewRating         int       `json:"new_rating"`
 	PerformanceRating int       `json:"performance_rating"`

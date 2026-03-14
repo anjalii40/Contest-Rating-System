@@ -178,10 +178,12 @@ func (r *pgRepository) UpdateUserRating(ctx context.Context, userID int, newRati
 // GetUserRatingHistory retrieves the rating history for a specific user
 func (r *pgRepository) GetUserRatingHistory(ctx context.Context, userID int) ([]*RatingHistory, error) {
 	query := `
-		SELECT id, user_id, contest_id, old_rating, new_rating, performance_rating, rank, percentile, rating_change, created_at
-		FROM rating_history
-		WHERE user_id = $1
-		ORDER BY created_at DESC
+		SELECT rh.id, rh.user_id, rh.contest_id, c.name, c.date, rh.old_rating, rh.new_rating, 
+		       rh.performance_rating, rh.rank, rh.percentile, rh.rating_change, rh.created_at
+		FROM rating_history rh
+		JOIN contests c ON rh.contest_id = c.id
+		WHERE rh.user_id = $1
+		ORDER BY c.date DESC
 	`
 	
 	rows, err := r.pool.Query(ctx, query, userID)
@@ -194,7 +196,7 @@ func (r *pgRepository) GetUserRatingHistory(ctx context.Context, userID int) ([]
 	for rows.Next() {
 		h := &RatingHistory{}
 		err := rows.Scan(
-			&h.ID, &h.UserID, &h.ContestID, &h.OldRating, &h.NewRating, 
+			&h.ID, &h.UserID, &h.ContestID, &h.ContestName, &h.ContestDate, &h.OldRating, &h.NewRating, 
 			&h.PerformanceRating, &h.Rank, &h.Percentile, &h.RatingChange, &h.CreatedAt,
 		)
 		if err != nil {
