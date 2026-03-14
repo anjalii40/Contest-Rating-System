@@ -1,43 +1,51 @@
-# Contest Rating Engine
+# 🚀 Contest Rating Engine
 
-A comprehensive percentile-based rating calculation platform built natively for real-time competitive programming ecosystems and massive multiplier tournament platforms.
+A comprehensive, percentile-based rating calculation platform built natively for real-time competitive programming ecosystems and massive multiplayer tournament platforms.
 
-The engine features a high-performance Go-based HTTP calculator service paired with a Next.js App Router analytic dashboard spanning an interactive PostgreSQL transactional data-layer.
+The engine features a high-performance HTTP calculator service paired with a Next.js App Router analytic dashboard spanning an interactive PostgreSQL transactional data-layer.
 
-## Tech Stack
-* **Backend:** Go 1.22, Gin Framework, pgx (conn pooling)
+## 🛠️ Tech Stack
+* **Backend:** Go 1.22, Gin Framework, pgx (connection pooling)
 * **Frontend:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, Recharts
 * **Database:** PostgreSQL 15, golang-migrate
 * **Infrastructure:** Docker, docker-compose multi-stage automated builds
 
-## Architecture Diagram (ASCII)
+## 🏗️ Architecture Diagram
 
-```text
-                     +---------------------------+
-                     |    Next.js UI Dashboard   |
-                     |   (Port 3000 / React)     |
-                     +-------------+-------------+
-                                   | HTTP/REST Requests
-                                   v  
-       +-------------------------------------------------------+
-       |                  Go Gin Backend (Port 8080)           |
-       |                                                       |
-       |  +----------------+   +---------------+   +---------+ |
-       |  | /api Handlers  |-->| Rating Engine |-->|  /pgx   | |
-       |  +----------------+   |   Service     |   |  Repo   | |
-       |                       +---------------+   +---------+ |
-       +------------------------------------------------T------+
-                             TCP Connection  (Port 5432)|
-                                                        v
-                                +-------------------------------+
-                                | PostgreSQL Database (Tiering) |
-                                | - users                       |
-                                | - contests                    |
-                                | - rating_history              |
-                                +-------------------------------+
+```mermaid
+graph TD
+    %% Styling
+    classDef frontend fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef backend fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef database fill:#6366f1,stroke:#4338ca,stroke-width:2px,color:#fff,rx:8px,ry:8px;
+    classDef subgraphStyle fill:#f8fafc,stroke:#cbd5e1,stroke-width:2px,stroke-dasharray: 5 5;
+
+    %% Nodes
+    subgraph Client [Client Layer]
+        UI[Next.js App Router UI <br/> Port 3000]:::frontend
+    end
+
+    subgraph API [Go Backend Layer]
+        Router[Gin API Router <br/> Port 8080]:::backend
+        Engine[Rating Engine <br/> Core Logic]:::backend
+        PGX[pgx Pool <br/> Repository]:::backend
+    end
+
+    subgraph Data [Persistence Layer]
+        DB[(PostgreSQL 15 <br/> Port 5432)]:::database
+    end
+
+    %% Flow
+    UI -- "REST/JSON" --> Router
+    Router -- "Updates/Requests" --> Engine
+    Engine -- "Business Logic" --> PGX
+    PGX -- "TCP / SQL" --> DB
+    
+    %% Style subgraphs
+    class Client,API,Data subgraphStyle;
 ```
 
-## How to Run
+## 💻 How to Run
 
 ### Method 1: Docker (Recommended)
 You can run the entire decoupled stack synchronously via Docker setup without needing NextJS, Go, or Postgres natively installed.
@@ -76,7 +84,7 @@ npm install
 npm run dev
 ```
 
-## API Endpoints
+## 🔌 API Endpoints
 
 | HTTP Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -86,7 +94,7 @@ npm run dev
 | `POST` | `/api/contests/:id/submit-results` | Computes entire bracket algorithm array via `{user_id, rank}` JSON payload arrays |
 | `GET` | `/api/users/:id/profile` | Fetches consolidated participant user stats and their chronological contest progression payloads limits |
 
-## Rating Execution Logic Explanation
+## 🧠 Rating Execution Logic Explanation
 The core logic runs statically independent of the DB, parsing input rank sets against theoretical percentile models.
 
 1. **Percentile Calculation:** `beaten = total_participants - rank` -> `Percentile = beaten / total_participants`.
@@ -107,7 +115,7 @@ The core logic runs statically independent of the DB, parsing input rank sets ag
     - `1600 - 1799`: Master
     - `>= 1800`: Grandmaster
 
-## Environment Variables
+## ⚙️ Environment Variables
 Defined within the root `.env` module loaded hierarchically into your Go instance and docker pipelines:
 
 | Variable | Description | Default Example |
@@ -118,7 +126,7 @@ Defined within the root `.env` module loaded hierarchically into your Go instanc
 | `BACKEND_PORT` | Main execution bind | `8080` |
 | `FRONTEND_PORT` | Node App Router compilation host | `3000` |
 
-## Folder Structure
+## 📁 Folder Structure
 
 ```text
 ├── backend/
