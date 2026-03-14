@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS rating_history;
+DROP TABLE IF EXISTS contests;
+DROP TABLE IF EXISTS users;
