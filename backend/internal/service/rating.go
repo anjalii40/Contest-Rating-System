@@ -10,6 +10,20 @@ const (
 	TierGrandmaster = "Grandmaster"  // red
 )
 
+const InitialRating = 1500
+
+var Brackets = []struct {
+	Threshold float64
+	Rating    int
+}{
+	{0.99, 1800},
+	{0.95, 1400},
+	{0.90, 1200},
+	{0.80, 1150},
+	{0.70, 1100},
+	{0.50, 1000},
+}
+
 // RatingResult holds the breakdown of the rating calculation
 type RatingResult struct {
 	Beaten       int
@@ -35,19 +49,11 @@ func CalculateRating(totalParticipants int, rank int, currentRating int) RatingR
 	// Standard performance represents the expected rating of someone performing at this percentile.
 	// Bottom 50% defaults to 800.
 	standardPerf := 800
-	
-	if percentile >= 0.99 {       // Top 1%
-		standardPerf = 1800
-	} else if percentile >= 0.95 { // Top 5%
-		standardPerf = 1400
-	} else if percentile >= 0.90 { // Top 10%
-		standardPerf = 1200
-	} else if percentile >= 0.80 { // Top 20%
-		standardPerf = 1150
-	} else if percentile >= 0.70 { // Top 30%
-		standardPerf = 1100
-	} else if percentile >= 0.50 { // Top 50%
-		standardPerf = 1000
+	for _, b := range Brackets {
+		if percentile >= b.Threshold {
+			standardPerf = b.Rating
+			break
+		}
 	}
 
 	ratingChange := (standardPerf - currentRating) / 2

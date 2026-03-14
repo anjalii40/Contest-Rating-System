@@ -30,9 +30,9 @@ func (h *Handler) CreateUser(c *gin.Context) {
 
 	user := &repository.User{
 		Name:          input.Name,
-		CurrentRating: 1500,
-		MaxRating:     1500,
-		Tier:          service.DetermineTier(1500), // Should evaluate to Expert
+		CurrentRating: service.InitialRating,
+		MaxRating:     service.InitialRating,
+		Tier:          service.DetermineTier(service.InitialRating),
 	}
 
 	createdUser, err := h.repo.CreateUser(c.Request.Context(), user)
@@ -102,45 +102,57 @@ func (h *Handler) SubmitContestResults(c *gin.Context) {
 		return
 	}
 
-	// Process updates
+	var updates []repository.ContestResultUpdate
+	var errorsList []string
+
+	// Process updates mapping
 	for _, res := range results {
 		user, err := h.repo.GetUserByID(ctx, res.UserID)
 		if err != nil {
-			log.Printf("User %d not found for contest %d, skipping. error: %v", res.UserID, contestID, err)
+			errStr := fmt.Sprintf("User %d not found for contest %d", res.UserID, contestID)
+			log.Println(errStr)
+			errorsList = append(errorsList, errStr)
 			continue
 		}
 
 		// Calculate rating using the core engine logic
 		ratingResult := service.CalculateRating(contest.TotalParticipants, res.Rank, user.CurrentRating)
 
-		history := &repository.RatingHistory{
+		newMaxRating := user.MaxRating
+		if ratingResult.NewRating > newMaxRating {
+			newMaxRating = ratingResult.NewRating
+		}
+		newTier := service.DetermineTier(ratingResult.NewRating)
+
+		updates = append(updates, repository.ContestResultUpdate{
 			UserID:            user.ID,
 			ContestID:         contest.ID,
 			OldRating:         user.CurrentRating,
 			NewRating:         ratingResult.NewRating,
 			PerformanceRating: ratingResult.StandardPerf,
 			Rank:              res.Rank,
-			Percentile:        ratingResult.Percentile * 100, // Make it 0-100 logic for DB decimal(5,2) if needed
+			Percentile:        ratingResult.Percentile * 100, // DB scale decimal
 			RatingChange:      ratingResult.RatingChange,
-		}
+			NewTier:           newTier,
+			NewMaxRating:      newMaxRating,
+		})
+	}
 
-		// Save the rating history
-		if err := h.repo.SaveRatingHistory(ctx, history); err != nil {
-			log.Printf("Failed to save rating history for User %d in contest %d: %v", res.UserID, contestID, err)
-			continue
+	// Submit via atomic transaction
+	if len(updates) > 0 {
+		if err := h.repo.SubmitContestResultsTx(ctx, updates); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction failed: " + err.Error()})
+			return
 		}
+	}
 
-		newMaxRating := user.MaxRating
-		if ratingResult.NewRating > newMaxRating {
-			newMaxRating = ratingResult.NewRating
-		}
-		
-		newTier := service.DetermineTier(ratingResult.NewRating)
-
-		// Update User row 
-		if err := h.repo.UpdateUserRating(ctx, user.ID, ratingResult.NewRating, newTier, newMaxRating); err != nil {
-			log.Printf("Failed to update user rating for User %d: %v", res.UserID, err)
-		}
+	// Throw a multi-status mapping for explicit partials warning
+	if len(errorsList) > 0 {
+		c.JSON(207, gin.H{
+			"message": "Partial success, some results failed to process",
+			"errors":  errorsList,
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Results submitted and ratings updated successfully"})
@@ -172,5 +184,82 @@ func (h *Handler) GetUserProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"user":    user,
 		"history": history,
+	})
+}
+
+// GET /api/leaderboard
+func (h *Handler) GetLeaderboard(c *gin.Context) {
+	tier := c.Query("tier")
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "25")
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = 25
+	}
+	if limit > 100 {
+		limit = 100 // max bounds limit
+	}
+
+	offset := (page - 1) * limit
+	ctx := c.Request.Context()
+
+	users, err := h.repo.GetLeaderboard(ctx, tier, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch leaderboard"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"page":  page,
+		"limit": limit,
+		"users": users,
+	})
+}
+
+// GET /api/contests
+func (h *Handler) GetContests(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	contests, err := h.repo.GetContests(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch contests"})
+		return
+	}
+
+	c.JSON(http.StatusOK, contests)
+}
+
+// GET /api/contests/:id
+func (h *Handler) GetContestWithStandings(c *gin.Context) {
+	contestIDStr := c.Param("id")
+	contestID, err := strconv.Atoi(contestIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid contest ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	contest, err := h.repo.GetContestByID(ctx, contestID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Contest not found"})
+		return
+	}
+
+	standings, err := h.repo.GetContestStandings(ctx, contestID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch standings"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"contest":   contest,
+		"standings": standings,
 	})
 }

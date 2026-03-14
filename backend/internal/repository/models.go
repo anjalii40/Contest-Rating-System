@@ -41,3 +41,14 @@ type RatingHistory struct {
 	RatingChange      int       `json:"rating_change"`
 	CreatedAt         time.Time `json:"created_at"`
 }
+
+// Standing represents a user's performance in a specific contest
+type Standing struct {
+	Rank         int     `json:"rank"`
+	UserID       int     `json:"user_id"`
+	Username     string  `json:"username"`
+	OldRating    int     `json:"old_rating"`
+	NewRating    int     `json:"new_rating"`
+	RatingChange int     `json:"rating_change"`
+	Percentile   float64 `json:"percentile"`
+}

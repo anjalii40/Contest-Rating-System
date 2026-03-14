@@ -18,6 +18,10 @@ type Repository interface {
 	SaveRatingHistory(ctx context.Context, entry *RatingHistory) error
 	UpdateUserRating(ctx context.Context, userID int, newRating int, newTier string, maxRating int) error
 	GetUserRatingHistory(ctx context.Context, userID int) ([]*RatingHistory, error)
+	GetLeaderboard(ctx context.Context, tier string, limit, offset int) ([]*User, error)
+	GetContests(ctx context.Context) ([]*Contest, error)
+	GetContestStandings(ctx context.Context, contestID int) ([]*Standing, error)
+	SubmitContestResultsTx(ctx context.Context, updates []ContestResultUpdate) error
 	Close()
 }
 
@@ -175,6 +179,56 @@ func (r *pgRepository) UpdateUserRating(ctx context.Context, userID int, newRati
 	return nil
 }
 
+// SubmitContestResultsTx executes a batch of result updates within a single pgx.Tx transaction
+func (r *pgRepository) SubmitContestResultsTx(ctx context.Context, updates []ContestResultUpdate) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	for _, u := range updates {
+		// Save rating history
+		historyQuery := `
+			INSERT INTO rating_history 
+			(user_id, contest_id, old_rating, new_rating, performance_rating, rank, percentile, rating_change)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`
+		_, err = tx.Exec(ctx, historyQuery,
+			u.UserID, u.ContestID, u.OldRating, u.NewRating, 
+			u.PerformanceRating, u.Rank, u.Percentile, u.RatingChange,
+		)
+		if err != nil {
+			return fmt.Errorf("error saving rating history for user %d: %w", u.UserID, err)
+		}
+
+		// Update user rating stats
+		userQuery := `
+			UPDATE users
+			SET current_rating = $1, 
+			    tier = $2, 
+			    max_rating = $3,
+			    contests_played = contests_played + 1,
+			    updated_at = $4
+			WHERE id = $5
+		`
+		cmdTag, err := tx.Exec(ctx, userQuery, u.NewRating, u.NewTier, u.NewMaxRating, time.Now(), u.UserID)
+		if err != nil {
+			return fmt.Errorf("error updating user rating for user %d: %w", u.UserID, err)
+		}
+		
+		if cmdTag.RowsAffected() == 0 {
+			return fmt.Errorf("user with ID %d not found for update", u.UserID)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	return nil
+}
+
 // GetUserRatingHistory retrieves the rating history for a specific user
 func (r *pgRepository) GetUserRatingHistory(ctx context.Context, userID int) ([]*RatingHistory, error) {
 	query := `
@@ -214,5 +268,134 @@ func (r *pgRepository) GetUserRatingHistory(ctx context.Context, userID int) ([]
 	}
 	
 	return history, nil
+}
+
+// GetLeaderboard retrieves paginated users sorted by rating
+func (r *pgRepository) GetLeaderboard(ctx context.Context, tier string, limit, offset int) ([]*User, error) {
+	var query string
+	var args []interface{}
+	
+	if tier != "" {
+		query = `
+			SELECT id, name, current_rating, max_rating, contests_played, tier, created_at, updated_at
+			FROM users
+			WHERE tier = $1
+			ORDER BY current_rating DESC
+			LIMIT $2 OFFSET $3
+		`
+		args = []interface{}{tier, limit, offset}
+	} else {
+		query = `
+			SELECT id, name, current_rating, max_rating, contests_played, tier, created_at, updated_at
+			FROM users
+			ORDER BY current_rating DESC
+			LIMIT $1 OFFSET $2
+		`
+		args = []interface{}{limit, offset}
+	}
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error querying leaderboard: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*User
+	for rows.Next() {
+		u := &User{}
+		if err := rows.Scan(
+			&u.ID, &u.Name, &u.CurrentRating, &u.MaxRating, 
+			&u.ContestsPlayed, &u.Tier, &u.CreatedAt, &u.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning user row: %w", err)
+		}
+		users = append(users, u)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating leaderboard rows: %w", err)
+	}
+
+	if users == nil {
+		users = []*User{}
+	}
+
+	return users, nil
+}
+
+// GetContests retrieves all contests sorted by date completely
+func (r *pgRepository) GetContests(ctx context.Context) ([]*Contest, error) {
+	query := `
+		SELECT id, name, date, total_participants, created_at, updated_at
+		FROM contests
+		ORDER BY date DESC
+	`
+	
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("error querying contests: %w", err)
+	}
+	defer rows.Close()
+
+	var contests []*Contest
+	for rows.Next() {
+		c := &Contest{}
+		if err := rows.Scan(
+			&c.ID, &c.Name, &c.Date, &c.TotalParticipants, 
+			&c.CreatedAt, &c.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning contest row: %w", err)
+		}
+		contests = append(contests, c)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating contest rows: %w", err)
+	}
+
+	if contests == nil {
+		contests = []*Contest{}
+	}
+
+	return contests, nil
+}
+
+// GetContestStandings retrieves the ranking results and rating changes of a contest
+func (r *pgRepository) GetContestStandings(ctx context.Context, contestID int) ([]*Standing, error) {
+	query := `
+		SELECT rh.rank, u.id, u.name, rh.old_rating, rh.new_rating, rh.rating_change, rh.percentile
+		FROM rating_history rh
+		JOIN users u ON rh.user_id = u.id
+		WHERE rh.contest_id = $1
+		ORDER BY rh.rank ASC
+	`
+	
+	rows, err := r.pool.Query(ctx, query, contestID)
+	if err != nil {
+		return nil, fmt.Errorf("error querying contest standings: %w", err)
+	}
+	defer rows.Close()
+
+	var standings []*Standing
+	for rows.Next() {
+		s := &Standing{}
+		if err := rows.Scan(
+			&s.Rank, &s.UserID, &s.Username, &s.OldRating, 
+			&s.NewRating, &s.RatingChange, &s.Percentile,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning standing row: %w", err)
+		}
+		standings = append(standings, s)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating standings rows: %w", err)
+	}
+
+	if standings == nil {
+		standings = []*Standing{}
+	}
+
+	return standings, nil
 }
 
