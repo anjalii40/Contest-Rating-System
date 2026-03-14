@@ -1,5 +1,15 @@
 package service
 
+// Tier constants
+const (
+	TierNewbie      = "Newbie"       // gray
+	TierPupil       = "Pupil"        // green
+	TierSpecialist  = "Specialist"   // cyan
+	TierExpert      = "Expert"       // blue
+	TierMaster      = "Master"       // purple
+	TierGrandmaster = "Grandmaster"  // red
+)
+
 // RatingResult holds the breakdown of the rating calculation
 type RatingResult struct {
 	Beaten       int
@@ -51,3 +61,24 @@ func CalculateRating(totalParticipants int, rank int, currentRating int) RatingR
 		NewRating:    newRating,
 	}
 }
+
+// DetermineTier returns the semantic tier based on a user's current rating.
+func DetermineTier(rating int) string {
+	if rating >= 1800 {
+		return TierGrandmaster
+	}
+	if rating >= 1600 {
+		return TierMaster
+	}
+	if rating >= 1400 {
+		return TierExpert
+	}
+	if rating >= 1200 {
+		return TierSpecialist
+	}
+	if rating >= 1000 {
+		return TierPupil
+	}
+	return TierNewbie
+}
+

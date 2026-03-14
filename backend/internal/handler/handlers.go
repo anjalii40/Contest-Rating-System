@@ -18,23 +18,6 @@ func NewHandler(repo repository.Repository) *Handler {
 	return &Handler{repo: repo}
 }
 
-// DetermineTier Helper
-func determineTier(rating int) string {
-	if rating >= 1800 {
-		return "Grandmaster"
-	}
-	if rating >= 1400 {
-		return "Master"
-	}
-	if rating >= 1200 {
-		return "Expert"
-	}
-	if rating >= 1000 {
-		return "Advanced"
-	}
-	return "Novice"
-}
-
 // POST /api/users
 func (h *Handler) CreateUser(c *gin.Context) {
 	var input struct {
@@ -49,7 +32,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		Name:          input.Name,
 		CurrentRating: 1500,
 		MaxRating:     1500,
-		Tier:          "Master", // 1500 puts them in Master based on our bounds
+		Tier:          service.DetermineTier(1500), // Should evaluate to Expert
 	}
 
 	createdUser, err := h.repo.CreateUser(c.Request.Context(), user)
@@ -152,7 +135,7 @@ func (h *Handler) SubmitContestResults(c *gin.Context) {
 			newMaxRating = ratingResult.NewRating
 		}
 		
-		newTier := determineTier(ratingResult.NewRating)
+		newTier := service.DetermineTier(ratingResult.NewRating)
 
 		// Update User row 
 		if err := h.repo.UpdateUserRating(ctx, user.ID, ratingResult.NewRating, newTier, newMaxRating); err != nil {
