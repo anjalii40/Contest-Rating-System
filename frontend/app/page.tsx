@@ -1,65 +1,92 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Trophy, Search, BarChart3, Users, Zap } from 'lucide-react';
 
 export default function Home() {
+  const [userId, setUserId] = useState('');
+  const router = useRouter();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (userId.trim()) {
+      router.push(`/profile/${userId.trim()}`);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-slate-50 relative overflow-hidden flex flex-col items-center justify-center p-4">
+
+      {/* Background decoration */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
+
+      <div className="max-w-3xl w-full text-center relative z-10">
+
+        {/* Header Hero */}
+        <div className="mb-8 inline-flex items-center justify-center p-3 bg-white rounded-2xl shadow-sm border border-gray-100">
+          <Trophy className="text-yellow-500 mr-2" size={28} />
+          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-500">
+            Contest Rating System
+          </span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        <h1 className="text-5xl md:text-6xl font-black text-slate-900 mb-6 tracking-tight">
+          Track Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Competitive</span> Progress
+        </h1>
+
+        <p className="text-lg text-slate-500 mb-12 max-w-xl mx-auto leading-relaxed">
+          The ultimate platform for measuring performance, calculating percentile tiers, and comparing contest histories inside real-time ecosystems.
+        </p>
+
+        {/* Search Box */}
+        <form onSubmit={handleSearch} className="max-w-md mx-auto mb-16 relative">
+          <div className="relative flex items-center">
+            <Search className="absolute left-4 text-slate-400 z-10" size={20} />
+            <input
+              type="number"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              placeholder="Enter your User ID (e.g. 1)"
+              className="w-full pl-12 pr-32 py-4 bg-white border border-gray-200 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              required
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <button
+              type="submit"
+              className="absolute right-2 py-2 px-6 bg-slate-900 text-white rounded-full font-medium hover:bg-slate-800 transition-colors shadow-md"
+            >
+              Lookup
+            </button>
+          </div>
+        </form>
+
+        {/* Feature grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+              <BarChart3 size={20} />
+            </div>
+            <h3 className="font-bold mb-2">Percentile Math</h3>
+            <p className="text-sm text-slate-500">Core logic ensures rankings strictly abide by mathematical variance and pool size.</p>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-4">
+              <Trophy size={20} />
+            </div>
+            <h3 className="font-bold mb-2">Automated Tiers</h3>
+            <p className="text-sm text-slate-500">Six visual tiers varying from Newbie to Grandmaster applied instantly.</p>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+              <Zap size={20} />
+            </div>
+            <h3 className="font-bold mb-2">Lightning Fast</h3>
+            <p className="text-sm text-slate-500">Decoupled Go backend architecture easily handles scale computations.</p>
+          </div>
         </div>
-      </main>
+
+      </div>
     </div>
   );
 }
