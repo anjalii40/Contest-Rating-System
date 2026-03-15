@@ -42,7 +42,7 @@ services:
     ports:
       - "${FRONTEND_PORT}:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:${BACKEND_PORT}/api
+      - NEXT_PUBLIC_API_URL=https://contest-rating-system-o84v.onrender.com
     depends_on:
       - backend
     restart: always

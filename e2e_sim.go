@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-var baseURL = "http://localhost:8080/api"
+var baseURL = "https://contest-rating-system-o84v.onrender.com/api"
 
 func init() {
 	if envURL := os.Getenv("API_URL"); envURL != "" {

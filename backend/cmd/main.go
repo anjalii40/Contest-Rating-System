@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/user/backend/internal/handler"
@@ -33,16 +34,31 @@ func main() {
 	// Initialize Gin router
 	router := gin.Default()
 
+	// Setup CORS
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"https://contest-rating-system-beige.vercel.app"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+
 	// Health check route
 	router.GET("/health", handler.HealthCheck)
 
 	// API Routes
 	api := router.Group("/api")
 	{
+		// User profiles and leadership
 		api.POST("/users", h.CreateUser)
-		api.POST("/contests", h.CreateContest)
-		api.POST("/contests/:id/submit-results", h.SubmitContestResults)
 		api.GET("/users/:id/profile", h.GetUserProfile)
+		api.GET("/leaderboard", h.GetLeaderboard)
+
+		// Contests definition and data
+		api.POST("/contests", h.CreateContest)
+		api.GET("/contests", h.GetContests)
+		api.GET("/contests/:id", h.GetContestWithStandings)
+		api.POST("/contests/:id/submit-results", h.SubmitContestResults)
 	}
 
 	// Determine port
