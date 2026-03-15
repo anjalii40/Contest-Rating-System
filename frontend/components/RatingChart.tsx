@@ -48,23 +48,24 @@ export default function RatingChart({ history }: RatingChartProps) {
     };
 
     return (
-        <div className="h-[300px] sm:h-[400px] w-full mt-6">
+        <div className="h-[280px] sm:h-[400px] w-full mt-6">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 10, bottom: 25, left: -20 }}>
+                <LineChart data={chartData} margin={{ top: 10, right: 8, bottom: 12, left: -24 }}>
                     <CartesianGrid stroke="#f1f5f9" vertical={false} />
                     <XAxis
                         dataKey="date"
                         tick={{ fill: '#64748b', fontSize: 12 }}
                         tickLine={false}
                         axisLine={{ stroke: '#e2e8f0' }}
-                        dy={10}
+                        minTickGap={24}
+                        tickMargin={10}
                     />
                     <YAxis
                         domain={['auto', 'auto']}
                         tick={{ fill: '#64748b', fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
-                        dx={-10}
+                        width={44}
                     />
                     <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} />
                     <Line
