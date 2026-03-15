@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://contest-rating-system-o84v.onrender.com';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://contest-rating-system-o84v.onrender.com';
 
 export const apiClient = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API}/api`,
 });
 
 export interface User {

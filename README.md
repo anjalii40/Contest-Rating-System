@@ -60,20 +60,20 @@ You can run the entire decoupled stack synchronously via Docker setup without ne
    docker compose up --build
    ```
 4. Access the stack:
-   - **Frontend UI Layer:** `http://localhost:3000`
-   - **Backend API Layer:** `http://localhost:8080`
+   - **Frontend UI Layer:** `https://contest-rating-system-beige.vercel.app`
+   - **Backend API Layer:** `https://contest-rating-system-o84v.onrender.com`
 
 ### Method 2: Local Development
 If you prefer running services outside of Docker for debugging/modding:
 
 **1. Database Instance:**
-Ensure PostgreSQL is running locally on port `5432` with a `contest_engine` database created matching your `.env` params.
+Ensure PostgreSQL is available through the `DATABASE_URL` value in your environment.
 
 **2. Backend:**
 ```bash
 cd backend
 go mod tidy
-migrate -path migrations -database "postgres://postgres:password@localhost:5432/contest_engine?sslmode=disable" up
+migrate -path migrations -database "$DATABASE_URL" up
 go run cmd/main.go
 ```
 
@@ -123,8 +123,11 @@ Defined within the root `.env` module loaded hierarchically into your Go instanc
 | `DB_USER` | Target database user credentials flag | `postgres` |
 | `DB_PASSWORD` | External containerized pg passkey | `secretpassword` |
 | `DB_NAME` | Assigned initial DB Table map instantiation | `contest_engine` |
+| `DATABASE_URL` | Deployed PostgreSQL connection string used by the backend | `your-deployed-postgres-connection-string` |
 | `BACKEND_PORT` | Main execution bind | `8080` |
 | `FRONTEND_PORT` | Node App Router compilation host | `3000` |
+| `NEXT_PUBLIC_API_URL` | Frontend API base URL | `https://contest-rating-system-o84v.onrender.com` |
+| `CORS_ALLOWED_ORIGINS` | Allowed frontend origin(s) for the backend | `https://contest-rating-system-beige.vercel.app` |
 
 ## 📁 Folder Structure
 

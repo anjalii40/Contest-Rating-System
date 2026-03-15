@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -18,8 +19,7 @@ func main() {
 	// Initialize Database Repository
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		// Fallback for docker-compose based on .env.example
-		dbURL = "postgres://postgres:postgres@localhost:5432/contest_engine?sslmode=disable"
+		log.Fatal("DATABASE_URL is required")
 	}
 	
 	repo, err := repository.NewRepository(dbURL)
@@ -34,9 +34,14 @@ func main() {
 	// Initialize Gin router
 	router := gin.Default()
 
+	allowedOrigins := []string{"https://contest-rating-system-beige.vercel.app"}
+	if envOrigins := os.Getenv("CORS_ALLOWED_ORIGINS"); envOrigins != "" {
+		allowedOrigins = strings.Split(envOrigins, ",")
+	}
+
 	// Setup CORS
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"https://contest-rating-system-beige.vercel.app"},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
