@@ -52,3 +52,17 @@ type Standing struct {
 	RatingChange int     `json:"rating_change"`
 	Percentile   float64 `json:"percentile"`
 }
+
+// ContestResultUpdate represents a single update in a contest batch
+type ContestResultUpdate struct {
+	UserID            int
+	ContestID         int
+	OldRating         int
+	NewRating         int
+	PerformanceRating int
+	Rank              int
+	Percentile        float64
+	RatingChange      int
+	NewTier           string
+	NewMaxRating      int
+}
