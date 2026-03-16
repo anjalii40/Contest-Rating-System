@@ -1,9 +1,10 @@
 import { getUserProfile } from '@/lib/api';
 import TierBadge from '@/components/TierBadge';
 import RatingChart from '@/components/RatingChart';
-import { Trophy, TrendingUp, Maximize, Target, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Trophy, TrendingUp, Maximize, Target, ArrowLeft, ChevronRight, FlaskConical } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { FAKE_HISTORY } from '@/lib/fakeHistory';
 
 // Tier thresholds (must match backend DetermineTier in rating.go)
 const TIER_CONFIG = [
@@ -42,7 +43,13 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
         notFound();
     }
 
-    const { user, history } = profile;
+    const { user, history: liveHistory } = profile;
+
+    // Use fake seed history for demo users (IDs 1-6) when the live DB has no records
+    const numericId = parseInt(userId);
+    const isDemoFallback = liveHistory.length === 0 && numericId >= 1 && numericId <= 6;
+    const history = isDemoFallback ? (FAKE_HISTORY[numericId] ?? liveHistory) : liveHistory;
+
     const latestChange = history.length > 0 ? history[0].rating_change : 0;
     const latestChangeColor =
         latestChange > 0 ? 'text-green-500' : latestChange < 0 ? 'text-red-500' : 'text-slate-500';
@@ -57,6 +64,18 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center py-6 sm:py-10 px-4">
             <div className="w-full max-w-4xl space-y-4">
+
+                {/* ── Demo data banner ── */}
+                {isDemoFallback && (
+                    <div className="flex items-center gap-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm">
+                        <FlaskConical size={16} className="shrink-0 text-amber-500" />
+                        <span>
+                            <strong>Demo data</strong> — the live database has no contest history yet for this user.
+                            The chart and table below show the seed dataset from{' '}
+                            <code className="bg-amber-100 px-1 rounded text-xs">fake_test_data.sql</code>.
+                        </span>
+                    </div>
+                )}
 
                 {/* ── Breadcrumb + user quick-nav ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
