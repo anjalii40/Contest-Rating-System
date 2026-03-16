@@ -139,9 +139,23 @@ func (h *Handler) GenerateDemoContest(c *gin.Context) {
 	})
 
 	selectedUsers := users[:participantCount]
+	usedNames := buildUsedNameSet(users)
+	for _, user := range selectedUsers {
+		if !isPlaceholderDemoName(user.Name) {
+			continue
+		}
+
+		newName := nextRandomUserName(randomizer, usedNames)
+		if err := h.repo.UpdateUserName(ctx, user.ID, newName); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to rename generated users"})
+			return
+		}
+		user.Name = newName
+	}
+
 	now := time.Now().UTC()
 	contest := &repository.Contest{
-		Name:              fmt.Sprintf("Demo Contest %s", now.Format("2006-01-02 15:04:05")),
+		Name:              nextRandomContestName(randomizer),
 		Date:              now,
 		TotalParticipants: participantCount,
 	}
@@ -169,7 +183,7 @@ func (h *Handler) GenerateDemoContest(c *gin.Context) {
 		"total_participants": participantCount,
 		"updated_users":      participantCount,
 		"winner_user_id":     winner.ID,
-		"redirect_path":      fmt.Sprintf("/profile/%d", winner.ID),
+		"redirect_path":      fmt.Sprintf("/contest/%d", createdContest.ID),
 	})
 }
 

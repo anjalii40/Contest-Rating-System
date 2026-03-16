@@ -63,7 +63,7 @@ export default async function Home({
               <h2 className="text-xl font-bold text-slate-800">Generate Demo Contest</h2>
             </div>
             <p className="text-sm sm:text-base text-slate-500 leading-relaxed mb-6">
-              Create one demo contest for all registered users, assign random ranks, update ratings in the database, and open the winner&apos;s profile automatically.
+              Create one contest for all registered users, assign random ranks, store every rating update, and open a searchable rank list with direct profile links.
             </p>
 
             {demoError && (

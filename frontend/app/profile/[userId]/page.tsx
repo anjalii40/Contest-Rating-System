@@ -1,10 +1,9 @@
 import { getUserProfile } from '@/lib/api';
 import TierBadge from '@/components/TierBadge';
 import RatingChart from '@/components/RatingChart';
-import { Trophy, TrendingUp, Maximize, Target, ArrowLeft, ChevronRight, FlaskConical } from 'lucide-react';
+import { Trophy, TrendingUp, Maximize, Target, ArrowLeft, ChevronRight } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { FAKE_HISTORY } from '@/lib/fakeHistory';
 
 // Tier thresholds (must match backend DetermineTier in rating.go)
 const TIER_CONFIG = [
@@ -34,8 +33,6 @@ function getTierProgress(rating: number) {
     return { tier: tier.name, pct, current: rating, min: tier.min, max: tier.max, nextTier: next?.name ?? null, toNext };
 }
 
-const DEMO_USER_IDS = [1, 2, 3, 4, 5, 6];
-
 function determineTierFromRating(rating: number) {
     const tier = TIER_CONFIG.find((t) => rating >= t.min);
     return tier?.name ?? 'Newbie';
@@ -49,11 +46,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
     }
 
     const { user, history: liveHistory } = profile;
-
-    // Use fake seed history for demo users (IDs 1-6) when the live DB has no records
-    const numericId = parseInt(userId);
-    const isDemoFallback = liveHistory.length === 0 && numericId >= 1 && numericId <= 6;
-    const history = isDemoFallback ? (FAKE_HISTORY[numericId] ?? liveHistory) : liveHistory;
+    const history = liveHistory;
 
     const latestHistoryEntry = history[0];
     const historyMaxRating = history.reduce((max, entry) => Math.max(max, entry.new_rating), 0);
@@ -85,20 +78,8 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
         <div className="min-h-screen bg-gray-50 flex flex-col items-center py-6 sm:py-10 px-4">
             <div className="w-full max-w-4xl space-y-4">
 
-                {/* ── Demo data banner ── */}
-                {isDemoFallback && (
-                    <div className="flex items-center gap-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm">
-                        <FlaskConical size={16} className="shrink-0 text-amber-500" />
-                        <span>
-                            <strong>Demo data</strong> — the live database has no contest history yet for this user.
-                            The chart and table below show the seed dataset from{' '}
-                            <code className="bg-amber-100 px-1 rounded text-xs">fake_test_data.sql</code>.
-                        </span>
-                    </div>
-                )}
-
                 {/* ── Breadcrumb + user quick-nav ── */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
                     <Link
                         href="/"
                         className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
@@ -107,22 +88,6 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
                         <ArrowLeft size={14} />
                         Back to Home
                     </Link>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs text-slate-400 mr-1">Try user:</span>
-                        {DEMO_USER_IDS.map((id) => (
-                            <Link
-                                key={id}
-                                href={`/profile/${id}`}
-                                id={`nav-user-${id}`}
-                                className={`w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${id === parseInt(userId)
-                                    ? 'bg-slate-900 text-white'
-                                    : 'bg-white border border-gray-200 text-slate-600 hover:border-slate-400'
-                                    }`}
-                            >
-                                {id}
-                            </Link>
-                        ))}
-                    </div>
                 </div>
 
                 {/* ── Main Card ── */}

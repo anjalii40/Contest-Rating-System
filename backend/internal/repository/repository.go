@@ -15,6 +15,7 @@ type Repository interface {
 	GetUserByName(ctx context.Context, name string) (*User, error)
 	GetAllUsers(ctx context.Context) ([]*User, error)
 	CreateUser(ctx context.Context, user *User) (*User, error)
+	UpdateUserName(ctx context.Context, userID int, name string) error
 	GetContestByID(ctx context.Context, id int) (*Contest, error)
 	CreateContest(ctx context.Context, contest *Contest) (*Contest, error)
 	SaveRatingHistory(ctx context.Context, entry *RatingHistory) error
@@ -149,8 +150,29 @@ func (r *pgRepository) CreateUser(ctx context.Context, user *User) (*User, error
 	if err != nil {
 		return nil, fmt.Errorf("error creating user: %w", err)
 	}
-	
+
 	return user, nil
+}
+
+// UpdateUserName renames an existing user.
+func (r *pgRepository) UpdateUserName(ctx context.Context, userID int, name string) error {
+	query := `
+		UPDATE users
+		SET name = $1,
+		    updated_at = $2
+		WHERE id = $3
+	`
+
+	cmdTag, err := r.pool.Exec(ctx, query, name, time.Now(), userID)
+	if err != nil {
+		return fmt.Errorf("error updating user name: %w", err)
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("user with ID %d not found for rename", userID)
+	}
+
+	return nil
 }
 
 // GetContestByID retrieves a contest by ID

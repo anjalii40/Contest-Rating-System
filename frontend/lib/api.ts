@@ -70,6 +70,21 @@ export interface GenerateDemoContestResponse {
   redirect_path: string;
 }
 
+export interface Standing {
+  rank: number;
+  user_id: number;
+  username: string;
+  old_rating: number;
+  new_rating: number;
+  rating_change: number;
+  percentile: number;
+}
+
+export interface ContestWithStandingsResponse {
+  contest: Contest;
+  standings: Standing[];
+}
+
 export async function getUserProfile(userId: string): Promise<UserProfileResponse> {
   const { data } = await apiClient.get<UserProfileResponse>(`/users/${userId}/profile`);
   return data;
@@ -86,5 +101,10 @@ export async function submitContestResults(contestId: number, payload: SubmitCon
 
 export async function generateDemoContest(payload: GenerateDemoContestPayload = {}): Promise<GenerateDemoContestResponse> {
   const { data } = await apiClient.post<GenerateDemoContestResponse>('/contests/generate-demo', payload);
+  return data;
+}
+
+export async function getContestWithStandings(contestId: string): Promise<ContestWithStandingsResponse> {
+  const { data } = await apiClient.get<ContestWithStandingsResponse>(`/contests/${contestId}`);
   return data;
 }
