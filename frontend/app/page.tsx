@@ -6,12 +6,16 @@ import { redirect } from 'next/navigation';
 async function handleGenerateDemoContest() {
   'use server';
 
+  let redirectPath = '';
+
   try {
     const result = await generateDemoContest();
-    redirect(result.redirect_path);
+    redirectPath = result.redirect_path;
   } catch {
     redirect('/?demoError=Could%20not%20generate%20a%20demo%20contest.%20Please%20make%20sure%20there%20are%20enough%20users%20in%20the%20database.');
   }
+
+  redirect(redirectPath);
 }
 
 export default async function Home({
