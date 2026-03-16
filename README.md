@@ -35,6 +35,36 @@ A percentile-based contest rating engine built with Next.js, Go, and PostgreSQL.
 | Database | PostgreSQL, golang-migrate |
 | Infra | Docker, Docker Compose |
 
+## Architecture Diagram
+
+```mermaid
+graph LR
+    U["User Browser"]
+    FE["Next.js Frontend<br/>Vercel"]
+    BE["Go API<br/>Gin + pgx<br/>Render"]
+    DB[("PostgreSQL")]
+
+    U --> FE
+    FE -->|REST / JSON| BE
+    BE -->|read / write| DB
+    DB -->|profiles, contests, rating history| BE
+    BE -->|contest data, standings, profile data| FE
+```
+
+## Contest Flow Diagram
+
+```mermaid
+flowchart TD
+    A["Click Generate Demo Contest"] --> B["POST /api/contests/generate-demo"]
+    B --> C["Fetch users from PostgreSQL"]
+    C --> D["Assign random ranks"]
+    D --> E["Calculate percentile, performance rating, rating change, new tier"]
+    E --> F["Store contest + rating_history rows"]
+    F --> G["Update user current_rating, max_rating, contests_played, tier"]
+    G --> H["Redirect to /contest/[contestId]"]
+    H --> I["Search standings and open /profile/[userId]"]
+```
+
 ## Rating Logic
 
 For a contest with total participants `N`, rank `R`, and current rating `CR`:
