@@ -12,6 +12,7 @@ import (
 // Repository defines the interface for data access
 type Repository interface {
 	GetUserByID(ctx context.Context, id int) (*User, error)
+	GetUserByName(ctx context.Context, name string) (*User, error)
 	CreateUser(ctx context.Context, user *User) (*User, error)
 	GetContestByID(ctx context.Context, id int) (*Contest, error)
 	CreateContest(ctx context.Context, contest *Contest) (*Contest, error)

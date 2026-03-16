@@ -2,16 +2,49 @@
 
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import type { TooltipProps } from 'recharts';
 import { RatingHistory } from '../lib/api';
 
 interface RatingChartProps {
     history: RatingHistory[];
 }
 
+interface ChartPoint {
+    name: string;
+    date: string;
+    rating: number;
+    change: number;
+    rank: number;
+    percentile: number;
+}
+
+function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
+    if (active && payload && payload.length) {
+        const data = payload[0]?.payload as ChartPoint;
+        return (
+            <div className="bg-white p-4 border border-gray-100 rounded-xl shadow-lg">
+                <p className="font-bold text-gray-900 mb-2">{data.name}</p>
+                <div className="text-sm space-y-1">
+                    <p className="text-gray-600">Date: <span className="font-medium text-gray-900">{data.date}</span></p>
+                    <p className="text-gray-600">Rank: <span className="font-medium text-gray-900">#{data.rank}</span></p>
+                    <p className="text-gray-600">Rating: <span className="font-bold text-indigo-600">{data.rating}</span></p>
+                    <p className="text-gray-600">
+                        Change: <span className={`font-medium ${data.change > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {data.change > 0 ? `+${data.change}` : data.change}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    return null;
+}
+
 export default function RatingChart({ history }: RatingChartProps) {
     // Recharts iterates left to right. Since our API returns newest first (descending by date),
     // we need to reverse it so the chart displays oldest to newest.
-    const chartData = [...history].reverse().map((entry) => ({
+    const chartData: ChartPoint[] = [...history].reverse().map((entry) => ({
         name: entry.contest_name,
         date: new Date(entry.contest_date).toLocaleDateString(),
         rating: entry.new_rating,
@@ -23,29 +56,6 @@ export default function RatingChart({ history }: RatingChartProps) {
     if (history.length === 0) {
         return <div className="text-gray-500 italic mt-4 text-center">No contests played yet.</div>;
     }
-
-    // Custom Tooltip for detailed information
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            const data = payload[0].payload;
-            return (
-                <div className="bg-white p-4 border border-gray-100 rounded-xl shadow-lg">
-                    <p className="font-bold text-gray-900 mb-2">{data.name}</p>
-                    <div className="text-sm space-y-1">
-                        <p className="text-gray-600">Date: <span className="font-medium text-gray-900">{data.date}</span></p>
-                        <p className="text-gray-600">Rank: <span className="font-medium text-gray-900">#{data.rank}</span></p>
-                        <p className="text-gray-600">Rating: <span className="font-bold text-indigo-600">{data.rating}</span></p>
-                        <p className="text-gray-600">
-                            Change: <span className={`font-medium ${data.change > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {data.change > 0 ? `+${data.change}` : data.change}
-                            </span>
-                        </p>
-                    </div>
-                </div>
-            );
-        }
-        return null;
-    };
 
     return (
         <div className="h-[280px] sm:h-[400px] w-full mt-6">

@@ -10,7 +10,7 @@ const (
 	TierGrandmaster = "Grandmaster"  // red
 )
 
-const InitialRating = 1500
+const InitialRating = 800
 
 var Brackets = []struct {
 	Threshold float64
