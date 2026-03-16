@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/user/backend/internal/repository"
@@ -59,6 +60,7 @@ func (h *Handler) CreateContest(c *gin.Context) {
 	// For simplicity, we assume the contest is "now", but real API might take a date
 	contest := &repository.Contest{
 		Name:              input.Name,
+		Date:              time.Now().UTC(),
 		TotalParticipants: input.TotalParticipants,
 	}
 

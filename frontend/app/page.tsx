@@ -1,6 +1,6 @@
 import React from 'react';
-import { Trophy, Search, BarChart3, Zap, BookOpen, ArrowRight } from 'lucide-react';
-import { getUserProfile } from '@/lib/api';
+import { Trophy, Search, BarChart3, Zap, BookOpen, ArrowRight, Workflow, Database, LineChart as LineChartIcon } from 'lucide-react';
+import { createContest, getUserProfile, submitContestResults } from '@/lib/api';
 import TierBadge from '@/components/TierBadge';
 import { redirect } from 'next/navigation';
 
@@ -34,6 +34,35 @@ const HOW_IT_WORKS = [
     desc: "Scroll down on the profile to see each contest's rank, percentile, and rating change.",
     color: 'bg-purple-600',
   },
+];
+
+const FLOW_STEPS = [
+  {
+    title: 'Contest Ends',
+    desc: 'You enter the user ID, contest name, total participants, and final rank.',
+    icon: Trophy,
+  },
+  {
+    title: 'Percentile Check',
+    desc: 'The Go backend maps that rank into a percentile bracket and picks the expected performance rating.',
+    icon: Workflow,
+  },
+  {
+    title: 'Rating Update',
+    desc: 'The system compares expected performance vs current rating and moves the rating halfway toward that target.',
+    icon: BarChart3,
+  },
+  {
+    title: 'Stored + Graphed',
+    desc: 'The result is saved to the database and shown in the user profile history graph and contest table.',
+    icon: Database,
+  },
+];
+
+const IO_ROWS = [
+  ['Your rank in a contest', 'New updated rating'],
+  ['Total participants', 'Rating change (+/-)'],
+  ['Your current rating', 'New tier (Bronze/Silver/Gold etc.)'],
 ];
 
 // Fetch all 6 demo users in parallel, silently skip any that fail
@@ -70,8 +99,51 @@ async function handleSearch(formData: FormData) {
   if (id) redirect(`/profile/${id}`);
 }
 
-export default async function Home() {
+async function handleContestFlow(formData: FormData) {
+  'use server';
+
+  const userId = formData.get('flowUserId')?.toString().trim() ?? '';
+  const contestName = formData.get('contestName')?.toString().trim() ?? '';
+  const totalParticipants = Number(formData.get('totalParticipants'));
+  const rank = Number(formData.get('rank'));
+
+  if (!userId || !contestName || !Number.isInteger(totalParticipants) || !Number.isInteger(rank)) {
+    redirect('/?flowError=Please%20fill%20every%20field%20with%20valid%20numbers.');
+  }
+
+  if (totalParticipants < 1 || rank < 1 || rank > totalParticipants) {
+    redirect('/?flowError=Rank%20must%20be%20between%201%20and%20total%20participants.');
+  }
+
+  try {
+    await getUserProfile(userId);
+
+    const contest = await createContest({
+      name: contestName,
+      total_participants: totalParticipants,
+    });
+
+    await submitContestResults(contest.id, [
+      {
+        user_id: Number(userId),
+        rank,
+      },
+    ]);
+  } catch {
+    redirect('/?flowError=Could%20not%20store%20that%20contest%20result.%20Check%20the%20user%20ID%20and%20backend.');
+  }
+
+  redirect(`/profile/${userId}`);
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: Promise<{ flowError?: string }>;
+}) {
+  const params = searchParams ? await searchParams : undefined;
   const demoUsers = await getDemoUsers();
+  const flowError = params?.flowError;
 
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-hidden">
@@ -181,6 +253,125 @@ export default async function Home() {
                 </div>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── Input to Output Flow + real persistence ── */}
+        <section className="w-full">
+          <div className="flex items-center gap-2 mb-5">
+            <Workflow size={18} className="text-emerald-500" />
+            <h2 className="text-lg font-bold text-slate-800">Contest Ends - Input to Output Flow</h2>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 bg-slate-50">
+                <h3 className="font-bold text-slate-800">Input → Output</h3>
+                <p className="text-sm text-slate-500 mt-1">What goes into the system and what comes out after rating calculation.</p>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="px-5 py-3 text-left font-semibold text-slate-500 uppercase tracking-wide text-xs">Input</th>
+                    <th className="px-5 py-3 text-left font-semibold text-slate-500 uppercase tracking-wide text-xs">Output</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {IO_ROWS.map(([input, output], index) => (
+                    <tr key={input} className={index < IO_ROWS.length - 1 ? 'border-b border-gray-50' : ''}>
+                      <td className="px-5 py-4 text-slate-800 font-medium">{input}</td>
+                      <td className="px-5 py-4 text-slate-700">{output}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <LineChartIcon size={18} className="text-indigo-500" />
+                <h3 className="font-bold text-slate-800">Run The Real Flow</h3>
+              </div>
+              <p className="text-sm text-slate-500 mb-5">
+                This uses the deployed backend: it creates a contest, stores the result, updates the user rating, and then redirects to the profile graph.
+              </p>
+
+              <form action={handleContestFlow} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">User ID</label>
+                  <input
+                    name="flowUserId"
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 1"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Contest Name</label>
+                  <input
+                    name="contestName"
+                    type="text"
+                    placeholder="e.g. Weekly Round 12"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Total Participants</label>
+                    <input
+                      name="totalParticipants"
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 100"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Rank</label>
+                    <input
+                      name="rank"
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 7"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {flowError && (
+                  <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {flowError}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors shadow-md"
+                >
+                  Submit Result And Open Profile
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
+            {FLOW_STEPS.map((step) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.title} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
+                    <Icon size={18} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 mb-1">{step.title}</h3>
+                  <p className="text-sm text-slate-500 leading-relaxed">{step.desc}</p>
+                </div>
+              );
+            })}
           </div>
         </section>
 
