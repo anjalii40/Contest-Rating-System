@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import type { TooltipProps } from 'recharts';
 import { RatingHistory } from '../lib/api';
 
 interface RatingChartProps {
@@ -18,7 +17,12 @@ interface ChartPoint {
     percentile: number;
 }
 
-function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
+interface CustomTooltipProps {
+    active?: boolean;
+    payload?: Array<{ payload: ChartPoint }>;
+}
+
+function CustomTooltip({ active, payload }: CustomTooltipProps) {
     if (active && payload && payload.length) {
         const data = payload[0]?.payload as ChartPoint;
         return (
