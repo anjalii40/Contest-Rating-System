@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Search, BarChart3, Zap, BookOpen, ArrowRight, Workflow, Database, LineChart as LineChartIcon } from 'lucide-react';
+import { Trophy, BarChart3, Zap, BookOpen, ArrowRight, Workflow, Database, LineChart as LineChartIcon } from 'lucide-react';
 import { createContest, getUserProfile, submitContestResults } from '@/lib/api';
 import TierBadge from '@/components/TierBadge';
 import { redirect } from 'next/navigation';
@@ -18,20 +18,20 @@ const TIERS = [
 const HOW_IT_WORKS = [
   {
     step: '1',
-    title: 'Pick a User',
-    desc: 'Enter any User ID (1–6) in the search box, or click one of the live demo cards below.',
+    title: 'Choose A Demo User',
+    desc: 'Open any live profile card below to inspect a user’s current rating, max rating, tier, and history.',
     color: 'bg-blue-600',
   },
   {
     step: '2',
-    title: 'View Their Profile',
-    desc: 'See current rating, tier badge, all-time stats, and a full rating history chart.',
+    title: 'Submit Contest Results',
+    desc: 'Use the contest flow form to enter a contest name, participant count, and final rank for that user.',
     color: 'bg-indigo-600',
   },
   {
     step: '3',
-    title: 'Explore Contests',
-    desc: "Scroll down on the profile to see each contest's rank, percentile, and rating change.",
+    title: 'See The Stored Outcome',
+    desc: 'After submission, the backend stores the result and the updated rating appears on the user profile graph.',
     color: 'bg-purple-600',
   },
 ];
@@ -90,13 +90,6 @@ function tierColor(tier: string): string {
     case 'grandmaster': return 'bg-red-600';
     default: return 'bg-slate-500';
   }
-}
-
-// Server action that handles the search form submission
-async function handleSearch(formData: FormData) {
-  'use server';
-  const id = formData.get('userId')?.toString().trim();
-  if (id) redirect(`/profile/${id}`);
 }
 
 async function handleContestFlow(formData: FormData) {
@@ -171,31 +164,8 @@ export default async function Home({
           </h1>
 
           <p className="text-lg text-slate-500 mb-10 max-w-xl mx-auto leading-relaxed">
-            Percentile-based ratings, automated tier assignment, and full contest history — all from a Go backend.
+            A contest rating workflow where every result becomes a stored rating update, a tier change, and a profile graph point powered by the Go backend.
           </p>
-
-          {/* Search form — uses Next.js Server Action */}
-          <form action={handleSearch} className="max-w-md mx-auto relative">
-            <div className="relative flex items-center">
-              <Search className="absolute left-4 text-slate-400 z-10" size={20} />
-              <input
-                id="user-id-input"
-                type="number"
-                name="userId"
-                placeholder="Enter User ID (e.g. 1)"
-                className="w-full pl-12 pr-32 py-4 bg-white border border-gray-200 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                required
-                min="1"
-              />
-              <button
-                id="lookup-btn"
-                type="submit"
-                className="absolute right-2 py-2 px-6 bg-slate-900 text-white rounded-full font-medium hover:bg-slate-800 transition-colors shadow-md"
-              >
-                Lookup
-              </button>
-            </div>
-          </form>
         </div>
 
         {/* ── Live Demo Users ── */}
@@ -214,7 +184,7 @@ export default async function Home({
                 className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left group"
               >
                 <div className={`w-9 h-9 rounded-full ${tierColor(user.tier)} flex items-center justify-center text-white font-bold text-sm shrink-0`}>
-                  {user.name[0]}
+                  {id}
                 </div>
                 <div className="min-w-0">
                   <div className="font-semibold text-slate-800 text-sm truncate">{user.name}</div>

@@ -36,6 +36,11 @@ function getTierProgress(rating: number) {
 
 const DEMO_USER_IDS = [1, 2, 3, 4, 5, 6];
 
+function determineTierFromRating(rating: number) {
+    const tier = TIER_CONFIG.find((t) => rating >= t.min);
+    return tier?.name ?? 'Newbie';
+}
+
 export default async function UserProfilePage({ params }: { params: Promise<{ userId: string }> }) {
     const { userId } = await params;
     const profile = await getUserProfile(userId).catch(() => null);
@@ -50,11 +55,26 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
     const isDemoFallback = liveHistory.length === 0 && numericId >= 1 && numericId <= 6;
     const history = isDemoFallback ? (FAKE_HISTORY[numericId] ?? liveHistory) : liveHistory;
 
+    const latestHistoryEntry = history[0];
+    const historyMaxRating = history.reduce((max, entry) => Math.max(max, entry.new_rating), 0);
+    const derivedCurrentRating = latestHistoryEntry?.new_rating ?? user.current_rating;
+    const derivedMaxRating = history.length > 0 ? Math.max(user.max_rating, historyMaxRating) : user.max_rating;
+    const derivedContestsPlayed = history.length > 0 ? history.length : user.contests_played;
+    const derivedTier = history.length > 0 ? determineTierFromRating(derivedCurrentRating) : user.tier;
+
+    const displayUser = {
+        ...user,
+        current_rating: derivedCurrentRating,
+        max_rating: derivedMaxRating,
+        contests_played: derivedContestsPlayed,
+        tier: derivedTier,
+    };
+
     const latestChange = history.length > 0 ? history[0].rating_change : 0;
     const latestChangeColor =
         latestChange > 0 ? 'text-green-500' : latestChange < 0 ? 'text-red-500' : 'text-slate-500';
 
-    const progress = getTierProgress(user.current_rating);
+    const progress = getTierProgress(displayUser.current_rating);
 
     // history is newest-first from the API
     const sortedHistory = [...history].sort(
@@ -112,21 +132,21 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
                     <div className="bg-slate-900 p-5 sm:p-8 text-white flex flex-col gap-6 sm:flex-row sm:justify-between sm:items-center">
                         <div className="min-w-0">
                             <div className="text-xs text-slate-400 mb-1 uppercase tracking-widest font-medium">User #{userId}</div>
-                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 break-words">{user.name}</h1>
+                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 break-words">{displayUser.name}</h1>
                             <div className="flex flex-wrap items-center gap-3">
-                                <TierBadge tier={user.tier} />
-                                <span className="text-slate-400 text-sm">Joined {new Date(user.created_at).toLocaleDateString()}</span>
+                                <TierBadge tier={displayUser.tier} />
+                                <span className="text-slate-400 text-sm">Joined {new Date(displayUser.created_at).toLocaleDateString()}</span>
                             </div>
                         </div>
                         <div className="flex flex-col items-start sm:items-end gap-3">
                             <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200">
                                 <Maximize size={16} />
-                                <span>Max Rating {user.max_rating}</span>
+                                <span>Max Rating {displayUser.max_rating}</span>
                             </div>
                             <div className="text-left sm:text-right">
                                 <div className="text-sm font-medium text-slate-400 uppercase tracking-widest">Current Rating</div>
                                 <div className="text-4xl sm:text-5xl font-black mt-1 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                                    {user.current_rating}
+                                    {displayUser.current_rating}
                                 </div>
                             </div>
                         </div>
@@ -163,13 +183,13 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
                             <div className="flex items-center gap-2 text-slate-500 mb-1">
                                 <Trophy size={16} /> <span className="text-sm font-medium">Contests</span>
                             </div>
-                            <div className="text-2xl font-bold">{user.contests_played}</div>
+                            <div className="text-2xl font-bold">{displayUser.contests_played}</div>
                         </div>
                         <div className="p-4 bg-slate-50 rounded-xl">
                             <div className="flex items-center gap-2 text-slate-500 mb-1">
                                 <Maximize size={16} /> <span className="text-sm font-medium">Max Rating</span>
                             </div>
-                            <div className="text-2xl font-bold">{user.max_rating}</div>
+                            <div className="text-2xl font-bold">{displayUser.max_rating}</div>
                         </div>
                         <div className="p-4 bg-slate-50 rounded-xl">
                             <div className="flex items-center gap-2 text-slate-500 mb-1">
