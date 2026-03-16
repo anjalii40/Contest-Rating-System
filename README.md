@@ -1,5 +1,8 @@
 # Contest Rating System
 
+> **Hiring Assessment — Codehurdle**
+> This project was built as a take-home engineering assessment for [Codehurdle](https://codehurdle.com). It demonstrates a full-stack percentile-based contest rating system using Go, Next.js, and PostgreSQL.
+
 A percentile-based contest rating engine built with Next.js, Go, and PostgreSQL. The app generates contests, assigns ranks, recalculates ratings and tiers, stores every update in the database, and shows the results through a searchable standings page and per-user profile history.
 
 ## Live Deployment
@@ -156,6 +159,57 @@ Frontend:
 cd frontend
 npm install
 npm run dev
+```
+
+## View Database In Real Time
+
+If you are running PostgreSQL through Docker, open the live database with:
+
+```bash
+docker exec -it contest_db psql -U postgres -d contest_engine
+```
+
+Useful `psql` commands:
+
+```sql
+\dt
+\d users
+\d contests
+\d rating_history
+```
+
+Live data queries:
+
+```sql
+SELECT * FROM users ORDER BY id DESC LIMIT 20;
+SELECT * FROM contests ORDER BY id DESC LIMIT 20;
+SELECT * FROM rating_history ORDER BY id DESC LIMIT 20;
+```
+
+Joined contest history view:
+
+```sql
+SELECT
+  rh.id,
+  u.name,
+  c.name AS contest_name,
+  rh.rank,
+  rh.old_rating,
+  rh.new_rating,
+  rh.rating_change,
+  rh.percentile
+FROM rating_history rh
+JOIN users u ON rh.user_id = u.id
+JOIN contests c ON rh.contest_id = c.id
+ORDER BY rh.id DESC
+LIMIT 20;
+```
+
+Helpful extras:
+
+```sql
+\x on
+\q
 ```
 
 ## Environment Variables
