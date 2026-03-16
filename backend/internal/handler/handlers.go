@@ -155,7 +155,7 @@ func (h *Handler) GenerateDemoContest(c *gin.Context) {
 
 	now := time.Now().UTC()
 	contest := &repository.Contest{
-		Name:              nextRandomContestName(randomizer),
+		Name:              "Generating Contest...",
 		Date:              now,
 		TotalParticipants: participantCount,
 	}
@@ -165,6 +165,13 @@ func (h *Handler) GenerateDemoContest(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create demo contest"})
 		return
 	}
+
+	contestName := nextRandomContestName(randomizer, createdContest.ID)
+	if err := h.repo.UpdateContestName(ctx, createdContest.ID, contestName); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to finalize demo contest name"})
+		return
+	}
+	createdContest.Name = contestName
 
 	updates := make([]repository.ContestResultUpdate, 0, participantCount)
 	for i, user := range selectedUsers {

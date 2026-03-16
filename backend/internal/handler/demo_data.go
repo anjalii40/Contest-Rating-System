@@ -76,12 +76,12 @@ func nextRandomUserName(randomizer *rand.Rand, used map[string]struct{}) string 
 	return fallback
 }
 
-func nextRandomContestName(randomizer *rand.Rand) string {
+func nextRandomContestName(randomizer *rand.Rand, contestNumber int) string {
 	return fmt.Sprintf(
-		"%s %s %s %d",
+		"%s %s %s #%d",
 		contestDescriptors[randomizer.Intn(len(contestDescriptors))],
 		contestThemes[randomizer.Intn(len(contestThemes))],
 		contestFormats[randomizer.Intn(len(contestFormats))],
-		randomizer.Intn(90)+10,
+		contestNumber,
 	)
 }

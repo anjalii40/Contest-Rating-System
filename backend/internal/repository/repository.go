@@ -18,6 +18,7 @@ type Repository interface {
 	UpdateUserName(ctx context.Context, userID int, name string) error
 	GetContestByID(ctx context.Context, id int) (*Contest, error)
 	CreateContest(ctx context.Context, contest *Contest) (*Contest, error)
+	UpdateContestName(ctx context.Context, contestID int, name string) error
 	SaveRatingHistory(ctx context.Context, entry *RatingHistory) error
 	UpdateUserRating(ctx context.Context, userID int, newRating int, newTier string, maxRating int) error
 	GetUserRatingHistory(ctx context.Context, userID int) ([]*RatingHistory, error)
@@ -214,8 +215,29 @@ func (r *pgRepository) CreateContest(ctx context.Context, contest *Contest) (*Co
 	if err != nil {
 		return nil, fmt.Errorf("error creating contest: %w", err)
 	}
-	
+
 	return contest, nil
+}
+
+// UpdateContestName renames an existing contest.
+func (r *pgRepository) UpdateContestName(ctx context.Context, contestID int, name string) error {
+	query := `
+		UPDATE contests
+		SET name = $1,
+		    updated_at = $2
+		WHERE id = $3
+	`
+
+	cmdTag, err := r.pool.Exec(ctx, query, name, time.Now(), contestID)
+	if err != nil {
+		return fmt.Errorf("error updating contest name: %w", err)
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("contest with ID %d not found for rename", contestID)
+	}
+
+	return nil
 }
 
 // SaveRatingHistory inserts a new rating history entry

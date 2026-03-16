@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trophy } from 'lucide-react';
 import { generateDemoContest } from '@/lib/api';
+import GenerateContestButton from '@/components/GenerateContestButton';
 import { redirect } from 'next/navigation';
 
 async function handleGenerateDemoContest() {
@@ -73,12 +74,7 @@ export default async function Home({
             )}
 
             <form action={handleGenerateDemoContest}>
-              <button
-                type="submit"
-                className="w-full py-3.5 bg-amber-500 text-slate-950 rounded-xl font-semibold hover:bg-amber-400 transition-colors shadow-md shadow-amber-100"
-              >
-                Generate Demo Contest For All Users
-              </button>
+              <GenerateContestButton />
             </form>
           </div>
         </section>
