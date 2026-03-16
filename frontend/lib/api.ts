@@ -57,6 +57,19 @@ export interface SubmitContestResultPayload {
   rank: number;
 }
 
+export interface GenerateDemoContestPayload {
+  participant_count?: number;
+}
+
+export interface GenerateDemoContestResponse {
+  contest_id: number;
+  contest_name: string;
+  total_participants: number;
+  updated_users: number;
+  winner_user_id: number;
+  redirect_path: string;
+}
+
 export async function getUserProfile(userId: string): Promise<UserProfileResponse> {
   const { data } = await apiClient.get<UserProfileResponse>(`/users/${userId}/profile`);
   return data;
@@ -69,4 +82,9 @@ export async function createContest(payload: CreateContestPayload): Promise<Cont
 
 export async function submitContestResults(contestId: number, payload: SubmitContestResultPayload[]): Promise<void> {
   await apiClient.post(`/contests/${contestId}/submit-results`, payload);
+}
+
+export async function generateDemoContest(payload: GenerateDemoContestPayload = {}): Promise<GenerateDemoContestResponse> {
+  const { data } = await apiClient.post<GenerateDemoContestResponse>('/contests/generate-demo', payload);
+  return data;
 }

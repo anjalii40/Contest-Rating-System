@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trophy, BarChart3, Zap, BookOpen, ArrowRight, Workflow, Database, LineChart as LineChartIcon } from 'lucide-react';
-import { createContest, getUserProfile, submitContestResults } from '@/lib/api';
+import { createContest, generateDemoContest, getUserProfile, submitContestResults } from '@/lib/api';
 import TierBadge from '@/components/TierBadge';
 import { redirect } from 'next/navigation';
 
@@ -129,14 +129,26 @@ async function handleContestFlow(formData: FormData) {
   redirect(`/profile/${userId}`);
 }
 
+async function handleGenerateDemoContest() {
+  'use server';
+
+  try {
+    const result = await generateDemoContest();
+    redirect(result.redirect_path);
+  } catch {
+    redirect('/?demoError=Could%20not%20generate%20a%20demo%20contest.%20Please%20make%20sure%20there%20are%20enough%20users%20in%20the%20database.');
+  }
+}
+
 export default async function Home({
   searchParams,
 }: {
-  searchParams?: Promise<{ flowError?: string }>;
+  searchParams?: Promise<{ flowError?: string; demoError?: string }>;
 }) {
   const params = searchParams ? await searchParams : undefined;
   const demoUsers = await getDemoUsers();
   const flowError = params?.flowError;
+  const demoError = params?.demoError;
 
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-hidden">
@@ -326,6 +338,31 @@ export default async function Home({
                   Submit Result And Open Profile
                 </button>
               </form>
+
+              <div className="mt-6 pt-6 border-t border-gray-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy size={18} className="text-amber-500" />
+                  <h4 className="font-bold text-slate-800">Generate Demo Contest</h4>
+                </div>
+                <p className="text-sm text-slate-500 mb-4">
+                  Instantly create one contest for all registered users, assign random ranks, update every rating in the database, and open the winner&apos;s profile graph.
+                </p>
+
+                {demoError && (
+                  <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600 mb-4">
+                    {demoError}
+                  </div>
+                )}
+
+                <form action={handleGenerateDemoContest}>
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-amber-500 text-slate-950 rounded-xl font-semibold hover:bg-amber-400 transition-colors shadow-md shadow-amber-100"
+                  >
+                    Generate Demo Contest For All Users
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
 

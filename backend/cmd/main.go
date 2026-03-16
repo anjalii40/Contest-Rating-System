@@ -61,6 +61,7 @@ func main() {
 
 		// Contests definition and data
 		api.POST("/contests", h.CreateContest)
+		api.POST("/contests/generate-demo", h.GenerateDemoContest)
 		api.GET("/contests", h.GetContests)
 		api.GET("/contests/:id", h.GetContestWithStandings)
 		api.POST("/contests/:id/submit-results", h.SubmitContestResults)

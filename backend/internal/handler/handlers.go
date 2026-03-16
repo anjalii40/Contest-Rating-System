@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,6 +19,28 @@ type Handler struct {
 
 func NewHandler(repo repository.Repository) *Handler {
 	return &Handler{repo: repo}
+}
+
+func buildContestResultUpdate(user *repository.User, contestID int, totalParticipants int, rank int) repository.ContestResultUpdate {
+	ratingResult := service.CalculateRating(totalParticipants, rank, user.CurrentRating)
+
+	newMaxRating := user.MaxRating
+	if ratingResult.NewRating > newMaxRating {
+		newMaxRating = ratingResult.NewRating
+	}
+
+	return repository.ContestResultUpdate{
+		UserID:            user.ID,
+		ContestID:         contestID,
+		OldRating:         user.CurrentRating,
+		NewRating:         ratingResult.NewRating,
+		PerformanceRating: ratingResult.StandardPerf,
+		Rank:              rank,
+		Percentile:        ratingResult.Percentile * 100,
+		RatingChange:      ratingResult.RatingChange,
+		NewTier:           service.DetermineTier(ratingResult.NewRating),
+		NewMaxRating:      newMaxRating,
+	}
 }
 
 // POST /api/users
@@ -73,6 +96,83 @@ func (h *Handler) CreateContest(c *gin.Context) {
 	c.JSON(http.StatusCreated, createdContest)
 }
 
+// POST /api/contests/generate-demo
+func (h *Handler) GenerateDemoContest(c *gin.Context) {
+	var input struct {
+		ParticipantCount int `json:"participant_count"`
+	}
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	ctx := c.Request.Context()
+	users, err := h.repo.GetAllUsers(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		return
+	}
+
+	if len(users) < 2 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "At least 2 users are required to generate a demo contest"})
+		return
+	}
+
+	participantCount := len(users)
+	if input.ParticipantCount > 0 {
+		if input.ParticipantCount < 2 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Participant count must be at least 2"})
+			return
+		}
+		if input.ParticipantCount > len(users) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Participant count exceeds available users"})
+			return
+		}
+		participantCount = input.ParticipantCount
+	}
+
+	randomizer := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomizer.Shuffle(len(users), func(i, j int) {
+		users[i], users[j] = users[j], users[i]
+	})
+
+	selectedUsers := users[:participantCount]
+	now := time.Now().UTC()
+	contest := &repository.Contest{
+		Name:              fmt.Sprintf("Demo Contest %s", now.Format("2006-01-02 15:04:05")),
+		Date:              now,
+		TotalParticipants: participantCount,
+	}
+
+	createdContest, err := h.repo.CreateContest(ctx, contest)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create demo contest"})
+		return
+	}
+
+	updates := make([]repository.ContestResultUpdate, 0, participantCount)
+	for i, user := range selectedUsers {
+		updates = append(updates, buildContestResultUpdate(user, createdContest.ID, participantCount, i+1))
+	}
+
+	if err := h.repo.SubmitContestResultsTx(ctx, updates); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store demo contest results"})
+		return
+	}
+
+	winner := selectedUsers[0]
+	c.JSON(http.StatusCreated, gin.H{
+		"contest_id":         createdContest.ID,
+		"contest_name":       createdContest.Name,
+		"total_participants": participantCount,
+		"updated_users":      participantCount,
+		"winner_user_id":     winner.ID,
+		"redirect_path":      fmt.Sprintf("/profile/%d", winner.ID),
+	})
+}
+
 // POST /api/contests/:id/submit-results
 func (h *Handler) SubmitContestResults(c *gin.Context) {
 	contestIDStr := c.Param("id")
@@ -118,27 +218,7 @@ func (h *Handler) SubmitContestResults(c *gin.Context) {
 			continue
 		}
 
-		// Calculate rating using the core engine logic
-		ratingResult := service.CalculateRating(contest.TotalParticipants, res.Rank, user.CurrentRating)
-
-		newMaxRating := user.MaxRating
-		if ratingResult.NewRating > newMaxRating {
-			newMaxRating = ratingResult.NewRating
-		}
-		newTier := service.DetermineTier(ratingResult.NewRating)
-
-		updates = append(updates, repository.ContestResultUpdate{
-			UserID:            user.ID,
-			ContestID:         contest.ID,
-			OldRating:         user.CurrentRating,
-			NewRating:         ratingResult.NewRating,
-			PerformanceRating: ratingResult.StandardPerf,
-			Rank:              res.Rank,
-			Percentile:        ratingResult.Percentile * 100, // DB scale decimal
-			RatingChange:      ratingResult.RatingChange,
-			NewTier:           newTier,
-			NewMaxRating:      newMaxRating,
-		})
+		updates = append(updates, buildContestResultUpdate(user, contest.ID, contest.TotalParticipants, res.Rank))
 	}
 
 	// Submit via atomic transaction

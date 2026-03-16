@@ -13,6 +13,7 @@ import (
 type Repository interface {
 	GetUserByID(ctx context.Context, id int) (*User, error)
 	GetUserByName(ctx context.Context, name string) (*User, error)
+	GetAllUsers(ctx context.Context) ([]*User, error)
 	CreateUser(ctx context.Context, user *User) (*User, error)
 	GetContestByID(ctx context.Context, id int) (*Contest, error)
 	CreateContest(ctx context.Context, contest *Contest) (*Contest, error)
@@ -71,6 +72,66 @@ func (r *pgRepository) GetUserByID(ctx context.Context, id int) (*User, error) {
 	}
 	
 	return user, nil
+}
+
+// GetUserByName retrieves a user by exact name match.
+func (r *pgRepository) GetUserByName(ctx context.Context, name string) (*User, error) {
+	user := &User{}
+	query := `
+		SELECT id, name, current_rating, max_rating, contests_played, tier, created_at, updated_at
+		FROM users
+		WHERE name = $1
+	`
+
+	err := r.pool.QueryRow(ctx, query, name).Scan(
+		&user.ID, &user.Name, &user.CurrentRating, &user.MaxRating,
+		&user.ContestsPlayed, &user.Tier, &user.CreatedAt, &user.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("user with name %q not found", name)
+		}
+		return nil, fmt.Errorf("error querying user by name: %w", err)
+	}
+
+	return user, nil
+}
+
+// GetAllUsers retrieves every user sorted by ID.
+func (r *pgRepository) GetAllUsers(ctx context.Context) ([]*User, error) {
+	query := `
+		SELECT id, name, current_rating, max_rating, contests_played, tier, created_at, updated_at
+		FROM users
+		ORDER BY id ASC
+	`
+
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("error querying users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*User
+	for rows.Next() {
+		user := &User{}
+		if err := rows.Scan(
+			&user.ID, &user.Name, &user.CurrentRating, &user.MaxRating,
+			&user.ContestsPlayed, &user.Tier, &user.CreatedAt, &user.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning user row: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating user rows: %w", err)
+	}
+
+	if users == nil {
+		users = []*User{}
+	}
+
+	return users, nil
 }
 
 // CreateUser inserts a new user
@@ -399,4 +460,3 @@ func (r *pgRepository) GetContestStandings(ctx context.Context, contestID int) (
 
 	return standings, nil
 }
-
